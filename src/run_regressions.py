@@ -1,7 +1,7 @@
 """
 Table 3: regress each indicator's one-day change on each method's tone
-score(s) jointly, controlling for the 3-month bill change (PLAN.md Section
-3A / Section 5 Step 4). Primary corpus = statements only (matches both
+score(s) jointly, controlling for the 3-month bill change. Primary corpus
+= statements only (matches both
 readings' focus); pooled multi-type version (with doc-type dummies) is run
 as our own extension beyond what either reading did.
 

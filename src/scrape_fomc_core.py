@@ -3,7 +3,7 @@ Scrape FOMC statements, minutes, and press-conference transcripts from
 federalreserve.gov for every meeting date in config.FOMC_MEETING_DATES
 (plus the 2020 special/unscheduled statements).
 
-Design notes (see PLAN.md Section 5, Step 1):
+Design notes:
 - Every fetched page/PDF is cached under data/raw/ so re-running this script
   doesn't hammer the Fed's servers.
 - Text is extracted from the `<div id="article">` container, which is present
@@ -20,8 +20,8 @@ Design notes (see PLAN.md Section 5, Step 1):
       than an explicit statement on the page.
   These assumptions are recorded here explicitly so they can be revisited.
 
-BUG FIX (see PLAN.md Section 9): minutes are NOT published on the meeting
-date - they come out ~3 weeks later. The original version of this script
+BUG FIX: minutes are NOT published on the meeting date - they come out
+~3 weeks later. The original version of this script
 stored the meeting date as the minutes' "date" field, which downstream
 (event_study.py) was read as the release date - silently computing the
 wrong market-reaction window for every minutes document.

@@ -9,3 +9,6 @@ __pycache__/
 .venv/
 venv/
 .DS_Store
+PLAN.md
+docs/
+FRE-GY-7871A_Assignment_2.pdf

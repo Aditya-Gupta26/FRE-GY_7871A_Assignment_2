@@ -1,6 +1,6 @@
 """
 Compute one-day changes in the 4 indicators (+ the DGS3MO control) around
-every document's release, per PLAN.md Section 3's two event-window versions:
+every document's release, using two event-window versions:
 
   - PRIMARY (time-aware): if released before the 4pm ET close, use
     prior-trading-close -> release-day-close; if released after, use
@@ -16,8 +16,8 @@ fetch_market_data.py) so its "change" is just its own value on the
 relevant day(s), differenced the same way as a level would be, since it's
 a per-day return series rather than a price level.
 
-BUG FIX (see PLAN.md Section 9): windows are anchored on `release_date_dt`,
-not `date_dt`. For every document type except minutes these are identical;
+BUG FIX: windows are anchored on `release_date_dt`, not `date_dt`. For
+every document type except minutes these are identical;
 for minutes, `date_dt` is the *meeting* date while `release_date_dt` is the
 true publication date (~3 weeks later, per build_corpus.py). Anchoring on
 the meeting date instead - the original version of this script - silently
@@ -93,8 +93,8 @@ def main():
 
     records = []
     for _, row in corpus.iterrows():
-        # release_date_dt (not date_dt) - see PLAN.md Section 9 / build_corpus.py:
-        # for minutes, date_dt is the *meeting* date, not when they were actually
+        # release_date_dt (not date_dt) - see build_corpus.py: for minutes,
+        # date_dt is the *meeting* date, not when they were actually
         # published (~3 weeks later). release_date_dt is the corrected field.
         release_date = row["release_date_dt"].normalize()
         rec = {"date": row["date"], "doc_type": row["doc_type"], "chair": row["chair"]}

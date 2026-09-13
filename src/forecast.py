@@ -1,14 +1,14 @@
 """
-Step 5 forecast for the September 15-16, 2026 FOMC meeting, built entirely
-from Steps 2-4 (tone scores + market-reaction regressions), per PLAN.md
-Section 5. Every number here is generated BEFORE the meeting's outcome is
+Forecast for the September 15-16, 2026 FOMC meeting, built entirely from
+the tone scores and market-reaction regressions computed earlier in the
+pipeline. Every number here is generated BEFORE the meeting's outcome is
 known (it can't be known - the decision is announced 2026-09-16, after our
 Sept 15 deadline), using only information available as of the last
 completed communication (the July 29, 2026 statement).
 
-REDESIGNED (see PLAN.md Section 10 / docs/steps/18-forecast-redesign.md):
-the original version of this file had two real problems, both found through
-discussion, not testing:
+REDESIGNED after the first version was found to be flawed: the original
+version of this file had two real problems, both found through discussion,
+not testing:
   1. market_reaction_forecast() plugged July's own tone scores into a
      regression that was FIT USING July's row - so its output was just
      July's in-sample fitted value, not a September forecast at all.

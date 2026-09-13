@@ -1,5 +1,5 @@
 """
-Method 2 - Word list / phrase lexicon tone scoring (PLAN.md Section 3A).
+Method 2 - Word list / phrase lexicon tone scoring.
 
 Formula (following "Parsing the Fed"):
     x_k(t) = (1/n_k) * sum_i sign( sum_p L(p) * S(p) * 1_k(i) )

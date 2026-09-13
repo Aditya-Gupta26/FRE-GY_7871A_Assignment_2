@@ -3,7 +3,7 @@ Merge the two scraped document sets (FOMC core: statements/minutes/presconf,
 and speeches/testimony) into one unified corpus dataframe, with a parsed
 release timestamp used for the event-study window in later steps.
 
-BUG FIX (see PLAN.md Section 9): `date` is the document's identifying date
+BUG FIX: `date` is the document's identifying date
 (for minutes, the *meeting* date - also the cross-table join key used
 everywhere else in the pipeline, so it is NOT changed here). A second
 column, `release_date_dt`, is the date to actually use for market-reaction
@@ -28,7 +28,7 @@ OUT_PATH = DATA_PROCESSED / "corpus.parquet"
 
 def parse_release_hour(doc_type: str, release_time_raw: str | None) -> float:
     """Return an approximate release hour (ET, 24h) used only to decide
-    same-day vs next-day close-to-close windows (see PLAN.md Section 3).
+    same-day vs next-day close-to-close windows.
     Statements/minutes/presconf: known/documented Fed release-time
     conventions (see scrape_fomc_core.py docstring).
     Speeches/testimony: release_time_raw is just a date (no time given on

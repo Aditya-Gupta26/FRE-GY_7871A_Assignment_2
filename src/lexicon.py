@@ -1,7 +1,7 @@
 """
 Hand-built hawkish/dovish phrase lexicon for the word-list tone-scoring method
-(PLAN.md Section 3A, Method 2 - following "Parsing the Fed"'s phrase-lexicon
-approach). Each entry is a (phrase, topic, sentiment) tuple:
+(following "Parsing the Fed"'s phrase-lexicon approach). Each entry is a
+(phrase, topic, sentiment) tuple:
   - phrase: a short phrase typical of FOMC statements/minutes/speeches.
     Matching is bag-of-words within a sentence (a phrase matches if all of
     its words appear anywhere in the sentence), not strict adjacency - this
@@ -13,9 +13,8 @@ approach). Each entry is a (phrase, topic, sentiment) tuple:
     omitted since they don't affect the sign-based scoring formula.
 
 This lexicon is our own construction (the readings only show illustrative
-examples, not a published list) - see PLAN.md's noted risk that it needs a
-sanity-check pass against a few statements of known tone before trusting it
-on the full corpus.
+examples, not a published list), so it needs a sanity-check pass against a
+few statements of known tone before trusting it on the full corpus.
 """
 
 LEXICON = [

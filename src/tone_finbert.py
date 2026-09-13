@@ -1,7 +1,7 @@
 """
-Method 1 (factor similarity) and Method 3 (FinBERT sentiment) tone scoring,
-per PLAN.md Section 3A. Both reuse the same FinBERT forward pass per batch
-of sentences (one model load, one pass) for efficiency:
+Method 1 (factor similarity) and Method 3 (FinBERT sentiment) tone scoring.
+Both reuse the same FinBERT forward pass per batch of sentences (one model
+load, one pass) for efficiency:
   - Method 1: mean-pooled last-hidden-state embedding per sentence, cosine
     similarity to two anchors ("Inflation will rise", "Interest rates will
     rise") averaged over the document -> inf_score, rate_score.
