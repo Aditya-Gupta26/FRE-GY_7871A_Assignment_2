@@ -228,3 +228,29 @@ Each step lists: **what**, **why this approach**, **how**, **output**, and **wat
 - I'll keep a running note of anything AI-assisted for `AI_USE.md` as we go, rather than reconstructing it at the end.
 
 **Immediate next actions (before Step 0 starts):** confirm repo is empty/public (Section 4 item 2), get the FRED key, confirm time budget, confirm local Python setup — then we clone the repo and start Step 0.
+
+---
+
+## 8. Execution log (v3) — pipeline complete
+
+All open items from Section 4 were resolved and the full pipeline (Steps 0–6) was executed in one continuous session. This section records what actually happened, deviations from the plan, and the real findings — kept separate from Sections 1–7 (the pre-execution plan) so both remain legible as a record of "what we intended" vs. "what we did."
+
+**Environment:** Python 3.13 venv (not 3.14 — confirmed via `pip index versions torch` that PyTorch has no 3.14 wheel yet, so 3.13 was used to avoid a dead end). Benchmarked CPU vs. Apple Silicon MPS for FinBERT inference before committing: MPS was *slower* (0.21s vs 0.07s per batch of 32) for this model/batch size, so CPU was used — a real finding worth keeping in mind for future small-model NLP work, not an assumption.
+
+**Data collected (Table 1 final):** 311 documents total — 304 Powell, 7 Warsh (2 statements, 2 minutes, 2 press conferences, 1 speech). Zero extraction failures across the whole corpus. Exact FOMC meeting dates were pulled directly from federalreserve.gov's historical/calendar pages (not estimated), covering Jan 2018 – Jul 2026. Speeches/testimony were correctly filtered to actual chair-tenure windows (a Powell speech after 2026-05-15 is excluded even though he remains a Governor and kept speaking).
+
+**Tone scoring:** all 3 methods implemented per Section 3A's exact formulas. The word-list lexicon (`src/lexicon.py`, our own construction) passed its sanity check cleanly: March 2020 emergency cuts scored fully dovish (-1.0) on the interest-rate topic, June/Sept 2022 hiking-cycle statements scored fully hawkish (+1.0).
+
+**Real, substantive finding used throughout the forecast:** classifying every statement's decision directly from its text (`src/rate_decisions.py`, searching for "raise/lower/maintain the target range") shows Powell's Fed cutting steadily from mid-2025 through April 2026, then Warsh **held** at his first meeting (June 2026) and **hiked** at his second (July 2026) — a hawkish pivot exactly at the leadership transition, independently corroborated by both the word-list and FinBERT tone scores on those same statements.
+
+**Table 3 finding worth flagging explicitly:** the DGS3MO control's coefficient is large (≈0.8–0.9) and highly significant (p<0.0001) in every 1-year-Treasury regression, and nearly identical R² (~30%) shows up across all four tone methods for that indicator — this is the 3-month bill mechanically co-moving with the 1-year yield on the same days, not tone doing the explanatory work. Net of that control, most individual tone coefficients are *not* significant at conventional levels (n=73 statements) — a modest, honest result consistent with the readings' own effect sizes, not a pipeline bug.
+
+**Forecast, with external validation:** a web search for real market pricing (CME FedWatch, Kalshi, Polymarket) found the Sept 2026 meeting genuinely priced as a "coin flip" (~48-66% hike probability) as of early September 2026, driven by the same catalyst (Warsh's Aug 28 Jackson Hole speech) our text-only model picked up independently — a strong, unplanned validation of the whole approach. Our raw ordinal-logit model output (72.7% hike) was more confident than the market; we explicitly blended the two into a final stated forecast (P(cut)≈5%, P(hold)≈35%, P(hike)≈60%) rather than reporting either alone. Also surfaced: a ceiling effect in the naive tone-momentum calculation (July's word-list score was already at the metric's maximum, mechanically capping "more hawkish" probability) and a direction disagreement between word-list and FinBERT sentiment scores from June→July — both reported honestly rather than resolved away.
+
+**Deliverables produced:**
+- `notebooks/analysis.ipynb` — executed top-to-bottom, 20 cells, zero errors, all outputs saved.
+- `report/FOMC_Communications_Report.pdf` — the standalone Brightspace report (Table 1, Figure 1, Table 2, Table 3 split by method, comparison-to-readings, forecast+recommendation), built via `src/generate_report.py` (HTML → weasyprint). Kept **out of the GitHub repo** (gitignored) since it's the separate Brightspace deliverable, not a code/notebook artifact — delivered to the user directly.
+- GitHub repo pushed twice: scaffold+scraping commit, then the full tone-scoring/regression/forecast/notebook commit.
+- `AI_USE.md` rewritten with a specific, honest account of what was AI-generated vs. jointly decided (see that file).
+
+**Known limitations carried into the report itself** (not hidden): Warsh-era N is tiny by construction; the word-list lexicon is our own construction, not a published one; we use daily close-to-close changes, not intraday tick data (matching "Parsing the Fed"'s own simplification); the Doh et al. alternative-statement method is structurally inapplicable post-~2021 due to the 5-year declassification lag.
