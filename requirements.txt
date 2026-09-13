@@ -3,6 +3,7 @@ beautifulsoup4
 lxml
 pdfplumber
 pandas
+pyarrow
 numpy
 yfinance
 fredapi
@@ -11,6 +12,7 @@ transformers
 torch
 nltk
 statsmodels
+scipy
 scikit-learn
 matplotlib
 seaborn
