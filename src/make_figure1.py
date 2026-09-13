@@ -12,9 +12,15 @@ import pandas as pd
 from config import DATA_PROCESSED, PROJECT_ROOT
 
 WARSH_START = pd.Timestamp("2026-05-22")
+# Distinct categorical colors (not shades of one color) so each document
+# type's own trend line is easy to follow by eye. Red is deliberately
+# skipped - it's reserved for the Warsh vertical line.
 DOC_TYPE_COLORS = {
-    "statement": "#1b4965", "minutes": "#5fa8d3", "presconf": "#62b6cb",
-    "speech": "#bee9e8", "testimony": "#cae9ff",
+    "statement": "#1f77b4",  # blue
+    "minutes": "#ff7f0e",    # orange
+    "presconf": "#2ca02c",   # green
+    "speech": "#9467bd",     # purple
+    "testimony": "#8c564b",  # brown
 }
 DOC_TYPE_ORDER = ["statement", "minutes", "presconf", "speech", "testimony"]
 
@@ -29,12 +35,13 @@ def main():
     df = pd.read_parquet(DATA_PROCESSED / "master_dataset.parquet")
     df = df.sort_values("date_dt")
 
-    fig, axes = plt.subplots(len(PANELS), 1, figsize=(11, 10), sharex=True)
+    fig, axes = plt.subplots(len(PANELS), 1, figsize=(12, 11), sharex=True)
     for ax, (col, title) in zip(axes, PANELS):
         for doc_type in DOC_TYPE_ORDER:
-            sub = df[df.doc_type == doc_type]
-            ax.scatter(sub["date_dt"], sub[col], s=14, label=doc_type,
-                       color=DOC_TYPE_COLORS[doc_type], alpha=0.75)
+            sub = df[df.doc_type == doc_type].sort_values("date_dt")
+            ax.plot(sub["date_dt"], sub[col], label=doc_type,
+                     color=DOC_TYPE_COLORS[doc_type], marker="o", markersize=3,
+                     linewidth=1.1, alpha=0.85)
         ax.axvline(WARSH_START, color="crimson", linestyle="--", linewidth=1.5)
         ax.set_title(title, fontsize=10, loc="left")
         ax.axhline(0.5 if col == "finbert_sentiment" else 0, color="gray", linewidth=0.6)
