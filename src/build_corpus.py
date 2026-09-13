@@ -2,6 +2,16 @@
 Merge the two scraped document sets (FOMC core: statements/minutes/presconf,
 and speeches/testimony) into one unified corpus dataframe, with a parsed
 release timestamp used for the event-study window in later steps.
+
+BUG FIX (see PLAN.md Section 9): `date` is the document's identifying date
+(for minutes, the *meeting* date - also the cross-table join key used
+everywhere else in the pipeline, so it is NOT changed here). A second
+column, `release_date_dt`, is the date to actually use for market-reaction
+windows - equal to `date_dt` for every document type except minutes, where
+`scrape_fomc_core.py` now supplies the true ~3-weeks-later publication date
+as `actual_release_date`. Only `event_study.py` should read
+`release_date_dt`; everything else (tone scoring, Table 1 counts, joins)
+correctly keeps using `date`/`date_dt` as before.
 """
 import json
 import re
@@ -52,6 +62,15 @@ def main():
     all_docs = core + speeches
     df = pd.DataFrame(all_docs)
     df["date_dt"] = pd.to_datetime(df["date"], format="%Y%m%d")
+
+    # actual_release_date defaults to the identifying date for every doc type
+    # except minutes (where scrape_fomc_core.py now supplies the true,
+    # later publication date explicitly).
+    if "actual_release_date" not in df.columns:
+        df["actual_release_date"] = pd.NA
+    df["actual_release_date"] = df["actual_release_date"].fillna(df["date"])
+    df["release_date_dt"] = pd.to_datetime(df["actual_release_date"], format="%Y%m%d")
+
     df["release_hour_et"] = df.apply(
         lambda r: parse_release_hour(r["doc_type"], r.get("release_time_raw")), axis=1
     )
@@ -66,6 +85,11 @@ def main():
     print(df.groupby(["doc_type", "chair"]).size())
     print(f"\nDate range: {df['date_dt'].min().date()} to {df['date_dt'].max().date()}")
     print(f"Total words in corpus: {df['n_words'].sum():,}")
+
+    diverged = df[df["date_dt"] != df["release_date_dt"]]
+    print(f"\nDocuments where release_date_dt differs from the meeting/identifying date: {len(diverged)}")
+    if len(diverged):
+        print(diverged[["date", "doc_type", "actual_release_date"]].to_string(index=False))
 
 
 if __name__ == "__main__":

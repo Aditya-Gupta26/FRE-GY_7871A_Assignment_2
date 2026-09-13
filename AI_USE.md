@@ -16,6 +16,18 @@ This project was built collaboratively with Claude (Anthropic, Claude Code), use
 - The hand-built phrase lexicon (`src/lexicon.py`) reflects domain judgment about what counts as hawkish/dovish monetary-policy language; it was sanity-checked against statements of known tone (March 2020 emergency cuts scored fully dovish, June/Sept 2022 hiking-cycle statements scored fully hawkish) before being trusted on the full corpus.
 - The final recommendation and its stated falsification condition are a judgment call, explicitly weighing the model's own (likely overconfident) output against real market pricing, not a number generated and reported uncritically.
 
+## A mistake made, and how it was caught and fixed
+
+This deserves its own honest section rather than a quiet edit to the numbers above.
+
+**The mistake:** in the original implementation, `scrape_fomc_core.py` stored every minutes document's release date as the *meeting* date, and `event_study.py` used that date directly to compute the market-reaction window. This was wrong — FOMC minutes are actually published about three weeks after the meeting, not the same day. The practical effect: every minutes document's "market reaction" in Table 2 was actually a duplicate of that day's statement/press-conference reaction, silently mislabeled as the minutes' own effect. This was Claude's error — the original design didn't distinguish "the date used to identify/URL a document" from "the date that document actually became public," and that gap wasn't caught during the original build or its own testing.
+
+**How it was caught:** the user asked a clarifying question about the regression design — "what if two documents release at the same time?" — which, followed through carefully rather than answered abstractly, led to actually checking whether our event-study windows reflected each document's *real* release date. They didn't, for minutes.
+
+**How it was fixed (see `PLAN.md` Section 9 for the full plan and blast-radius analysis, done *before* any code was changed):** `scrape_fomc_core.py` now computes each minutes document's true release date using the Fed's own stated policy ("three weeks after the policy decision"), verified against 5 independently-confirmed real release dates spanning 2018–2026 before trusting it. A first attempt at the fix tried scraping the page's own "Last Update" field instead — that also turned out to be unreliable (caught by cross-checking it against real published dates, not by assumption) and was replaced before shipping, not after. The fix was scoped to touch only 3 files, and confirmed to leave the FinBERT tone scores, the statements-only Table 3 result (the report's headline finding), and the forecast completely unchanged — all verified by direct comparison of the regenerated numbers against the pre-fix ones, not assumed from the design.
+
+**What this changed in the delivered numbers:** Table 2's minutes rows, and Table 3's pooled (statements+minutes+press-conferences) extension. **What it did not change:** Table 3's primary statements-only result, the DGS3MO-confound finding, the rate-decision classifier, or the forecast — none of these ever depended on minutes' event-study data in the first place.
+
 ## Tools
 
 - Claude (Anthropic), via Claude Code

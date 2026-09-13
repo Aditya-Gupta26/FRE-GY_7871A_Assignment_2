@@ -35,4 +35,6 @@ Once everything was shipped, you asked for exactly what this file (and the fifte
 - **PDF report:** 6 pages, all required sections, delivered directly.
 - **This documentation set:** `docs/STORY.md` plus 16 step files, covering every one of the 18 code files in the order they were actually built, with what each does, why it was necessary, and the real result it produced.
 
-**Back to:** [the central index](../STORY.md).
+This was the state of things at the time — but it wasn't the end of the story. A user question shortly after led to finding and fixing a real bug in how minutes' release dates were handled. See [Step 17](17-post-delivery-bug-fix.md) for that chapter, told the same way as this one: honestly, including the parts that didn't work on the first try.
+
+**Next:** [Step 17 — Post-Delivery Bug Fix](17-post-delivery-bug-fix.md). **Back to:** [the central index](../STORY.md).

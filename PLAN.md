@@ -254,3 +254,80 @@ All open items from Section 4 were resolved and the full pipeline (Steps 0–6) 
 - `AI_USE.md` rewritten with a specific, honest account of what was AI-generated vs. jointly decided (see that file).
 
 **Known limitations carried into the report itself** (not hidden): Warsh-era N is tiny by construction; the word-list lexicon is our own construction, not a published one; we use daily close-to-close changes, not intraday tick data (matching "Parsing the Fed"'s own simplification); the Doh et al. alternative-statement method is structurally inapplicable post-~2021 due to the 5-year declassification lag.
+
+---
+
+## 9. Post-delivery bug fix: minutes were assigned the wrong release date
+
+Found by the user asking a clarifying question about the regression design ("what if two documents release at the same time?"), which led to checking whether our event-study windows actually reflect each document's *real* release date. They don't, for one document type. This section is the plan for the fix, written before touching any code, specifically to trace the full blast radius before acting — not just patch the symptom.
+
+### The bug, precisely
+
+`scrape_fomc_core.py`'s `scrape_minutes()` stores `"date": date`, where `date` is the **meeting date** (e.g. `20260729`) — because that's what's embedded in the Fed's minutes URL (`fomcminutes20260729.htm`). But FOMC minutes are not published on the meeting date; they're published **about three weeks later**. `event_study.py` reads that `date` field directly as "when was this released" and computes the one-day market window around it — so every minutes document's "market reaction" is actually measuring the market's reaction to *that day's statement and press conference*, not the minutes (which weren't even public yet).
+
+### Verified against the live site before writing any fix (not assumed)
+
+Re-checked three minutes pages spanning the full window, specifically looking for a reliable field holding the true publication date:
+
+| Meeting date | `lastUpdate` div on the minutes page | Gap |
+|---|---|---|
+| 2018-01-30/31 | February 21, 2018 | 21 days |
+| 2026-06-16/17 | July 08, 2026 | 21 days |
+| 2026-07-28/29 | August 19, 2026 | 22 days |
+
+The `lastUpdate` div is consistent, present across the whole 2018–2026 window, and matches the well-known ~3-week convention. **Explicitly ruled out a trap**: the minutes' own body text contains the phrase "for release at 2:00 p." — but that's describing the policy directive's effective time (content *within* the minutes), not the minutes document's own publication date. Confirmed this isn't the field to parse.
+
+### Addendum, written during execution: the plan above was itself revised before shipping
+
+The 3-example spot-check above looked solid enough to proceed on `lastUpdate` alone. Before actually writing the extraction code, a wider check was run across all 69 minutes documents (once the field was being scraped programmatically rather than checked by hand one at a time) — and one came back with a 65-day gap: the Sept 21–22, 2021 meeting's `lastUpdate` read "November 26, 2021." An independent web search confirmed the *true* release date was October 13, 2021 — `lastUpdate` was off by 44 days. It turns out `lastUpdate` reflects whenever the page was last technically touched (a later, unrelated edit), not necessarily the original publication date.
+
+**Revised approach, used in the actual implementation:** compute the release date directly from the Fed's own stated, consistent policy — 21 calendar days after the meeting's second day — verified against 5 independently-confirmed real dates (adding Sept 2021 and Dec 2018 to the 3 above), including a December/holiday-season meeting, all matching exactly. `lastUpdate` is kept only as a diagnostic cross-check (flagged if it disagrees with the computed date by more than 3 days), not the source of truth. This is a stronger, more defensible fix than the one originally planned in this section, and it was only strengthened because we happened to check all 69 cases instead of stopping at 3 examples that agreed. See [Step 17](../docs/steps/17-post-delivery-bug-fix.md) for the full account.
+
+### The fix, designed for minimum blast radius
+
+Add a new field, populated only by `scrape_minutes()`, holding the true release date parsed from `lastUpdate`. Everything else about how a "document" is identified (the `date` field used as the join key across every table) **stays exactly as it is** — we are not renaming or repurposing that key, only adding a second, purpose-specific date used exclusively for picking the correct market-data window. `build_corpus.py` defaults this new field to the existing `date` for every document type where the two are already the same (statements, press conferences, speeches, testimony — none of which have this problem), so only `scrape_fomc_core.py` and two downstream files need code changes.
+
+### Full blast-radius trace, before doing anything
+
+**Code files that need to change (4):**
+1. `src/scrape_fomc_core.py` — `scrape_minutes()` gains a new `actual_release_date` field, parsed from `lastUpdate`.
+2. `src/build_corpus.py` — parses that field into a real `release_date_dt` column (defaulting to the existing `date_dt` when the field is absent), and computes `release_hour_et` / `released_before_close` from *that* date instead of the meeting date. Minutes' time-of-day convention (2:00 p.m. ET) is unchanged — only which *date* it applies to changes.
+3. `src/event_study.py` — swaps `date_dt` for `release_date_dt` as the anchor for window lookups. One variable change; identical logic otherwise.
+4. That's it for code. No changes to `lexicon.py`, `tone_word_list.py`, `tone_finbert.py`, `rate_decisions.py`, `make_figure1.py`, `fetch_market_data.py`, `scrape_speeches_testimony.py`, `forecast.py`, or `run_regressions.py` themselves — their *outputs* change where downstream of the fix, but their code doesn't need to.
+
+**Data artifacts that must be regenerated (all fast — no new network calls, everything re-parses already-cached HTML/JSON):**
+`fomc_core_documents.json` → `corpus.parquet` → `event_changes.parquet` → `master_dataset.parquet` → `table3_regressions.csv` → `table2_warsh_era.csv` → `forecast_market_reaction.csv` (re-run to *confirm* unchanged, see below).
+
+**Data artifacts that do NOT need to be touched, and why (this is the important part to get right):**
+- `scores_word_list.parquet`, `scores_finbert.parquet` — tone scores are computed from document *text*, never from date. The `date` join key they use is unchanged. **The ~13-minute FinBERT run does not need to be redone.**
+- `market_panel.csv` — the raw market data itself is correct and untouched; we're only fixing *which day* of it we look up for minutes.
+- `rate_decisions.csv` — built from statement text only; minutes never enter it.
+- `figure1_tone_over_time.png` — built from tone scores only, no market data involved at all.
+
+**What actually changes in the numbers, and what doesn't:**
+- Table 2's minutes rows — **will change** (correctly, to reflect the real ~3-week-later market window).
+- Table 3's `pooled_core_docs` regression (statements+minutes+presconf) — **will change**, since ~1/3 of its 207 rows had the wrong window.
+- Table 3's `statements_only` regression (the report's primary, headline result) — **mathematically cannot change**: it never included minutes rows in the first place. Re-running it should reproduce identical numbers; if it doesn't, that itself would be a signal something else broke.
+- The forecast (`forecast.py`) — reads only statement-level tone and the `statements_only` Table 3 row for its market-reaction scenario, so its numbers **should not change**. Re-run it anyway to *confirm* that, not assume it.
+- The DGS3MO-confound finding, the "Parsing the Fed" comparison, the whole forecast section — all live in the unaffected statements-only world and stand as reported.
+
+**Deliverables that need regenerating as a consequence:**
+- `notebooks/analysis.ipynb` — re-executed top to bottom (it displays both the statements-only *and* pooled Table 3, so the pooled section's numbers will visibly update).
+- `report/FOMC_Communications_Report.pdf` — regenerated (its Table 2 will change; its Table 3 only ever showed statements-only, so that section is unaffected in value but gets rebuilt for consistency).
+
+**Documentation that needs an honest correction, not a silent rewrite:**
+- `AI_USE.md` — a new, specific entry: this was a mistake in the original implementation, caught by the user's question, not by us.
+- `README.md` — the Step 10/11 summary paragraphs need to reflect the corrected behavior.
+- `docs/steps/04-scraping-fomc-core-documents.md` and `docs/steps/10-event-study.md` — both describe the original (buggy) design as if it were simply correct; each gets a dated correction note, not a quiet edit that erases the fact a bug existed.
+- `docs/steps/12-figures-tables-and-decisions.md` — Table 2 is discussed there directly; needs the corrected framing.
+- A new `docs/steps/17-post-delivery-bug-fix.md`, added to `docs/STORY.md`'s index, telling this correction as its own honest chapter — because it happened after "shipping," not before, and the story should say so rather than pretend it was caught in Step 10 originally.
+
+### Sequencing
+
+1. Code changes (4 files above).
+2. Regenerate the data artifacts in dependency order, checking at each step that the "should not change" numbers really don't.
+3. Re-execute the notebook; verify zero errors again.
+4. Regenerate the PDF; spot-check the corrected Table 2 visually.
+5. Update `AI_USE.md`, `README.md`, the affected `docs/steps/*.md` files, add the new Step 17 doc, update `STORY.md`.
+6. New git commit (not amended — the original commits stay as an honest record of what was actually shipped when), push.
+7. Re-deliver the corrected PDF to the user.
