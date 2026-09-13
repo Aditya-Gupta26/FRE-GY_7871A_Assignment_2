@@ -160,29 +160,44 @@ both are stated limitations shared by anyone doing this analysis today, not shor
 &mdash; a hawkish pivot exactly at the leadership transition, consistent with hawkish word-list and FinBERT
 tone scores on both statements.</p>
 
+<div class="callout"><strong>Forecast pipeline redesigned after initial delivery</strong> (full account in
+docs/steps/18-forecast-redesign.md): the original market-reaction forecast plugged July's own tone scores
+into a regression that had been fit using July's own row &mdash; so its output was mathematically just July's
+already-known fitted value, not a September forecast. The fix: a shared, <em>lagged</em> predictor set (each
+meeting's own decision plus all four word-list topic scores, lagged by one meeting) now trains a small family
+of models below, feeding a genuine forecast of September's own tone into the unchanged Table 3
+coefficients.</div>
+
 <h3>Rate decision</h3>
-<p>An ordinal logistic regression of each meeting's decision on the previous meeting's decision and tone
-(src/forecast.py) &mdash; using only information available before the meeting being forecast &mdash;
-outputs P(cut)=0.9%, P(hold)=26.4%, P(hike)=72.7% from July's inputs. Real market pricing in early September
-2026 (CME FedWatch ~56-66%, Kalshi ~48%, Polymarket ~49%) frames this as a genuine "coin flip," a sharp jump
-from ~36% before Warsh's August 28 Jackson Hole speech &mdash; the same catalyst our text-only model
-independently flagged. Blending our model with this market cross-check (rather than reporting either alone):</p>
+<p>An ordinal logistic regression of each meeting's decision on the previous meeting's decision and <strong>all
+four</strong> word-list topic scores (src/forecast.py) &mdash; using only information available before the
+meeting being forecast &mdash; outputs P(cut)=0.8%, P(hold)=23.7%, P(hike)=75.5% from July's inputs. Adding the
+two additional topics (economy, job market) barely moved this number; both come back statistically
+insignificant (p=0.62, p=0.85) &mdash; the model is dominated almost entirely by the previous decision itself
+(p=0.001), not tone. Real market pricing in early September 2026 (CME FedWatch ~56-66%, Kalshi ~48%,
+Polymarket ~49%) frames this as a genuine "coin flip," a sharp jump from ~36% before Warsh's August 28 Jackson
+Hole speech &mdash; the same catalyst our text-only model independently flagged. Blending our model with this
+market cross-check (rather than reporting either alone):</p>
 <p style="font-size:13pt; font-weight:bold; text-align:center;">P(cut) &asymp; 5% &nbsp;&nbsp; P(hold) &asymp; 35% &nbsp;&nbsp; P(hike) &asymp; 60%</p>
 
 <h3>Statement tone</h3>
-<p><strong>P(September statement more hawkish than July) &asymp; 50-55%.</strong> The naive historical-momentum
-estimate (20%) is distorted by a ceiling effect: July's word-list interest-rate score is already at +1.0, the
-top of its scale, so "more hawkish" is nearly impossible on that measure by construction. Working the other
-way: FinBERT's whole-document sentiment score actually <em>fell</em> from June (0.45) to July (0.40) even as
-the word-list score rose &mdash; the two methods disagree on direction, which reflects genuine uncertainty
-rather than a resolvable inconsistency.</p>
+<p><strong>P(September statement more hawkish than July) &asymp; 10%.</strong> This now comes from a real
+trained logistic regression (binary outcome: did wl_interest_rate rise vs. the previous statement), not a
+distorted lookup, so we trust its direction directly instead of overriding it: after an already-elevated
+reading, mean reversion is the more likely outcome. This is corroborated by a separate tone-forecast model,
+which independently predicts September's wl_interest_rate at 0.89, below July's actual 1.00, for the same
+reason. That said, the logistic regression's own explanatory power is weak (pseudo-R&sup2;=0.09, no
+individually significant predictor), so ~10% should be read as "probably meaningfully below 50%," not a
+precise figure.</p>
 
 <h3>Market reaction</h3>
 {pd.read_csv(DATA_PROCESSED / "forecast_market_reaction.csv").pipe(df_to_html_table, float_fmt="{:.4f}")}
-<p class="caption">Predicted change under a "September looks like July" tone scenario (word-list method,
-statements-only regression, DGS3MO control set to 0). Point predictions are small and P(rises) values sit
-close to 50% &mdash; consistent with, not contradicted by, Table 3's mostly-insignificant tone coefficients.
-We have real conviction on the rate-decision leg above; we do not claim comparable conviction here.</p>
+<p class="caption">Predicted change using the tone-forecast layer's real September prediction (word-list
+method, statements-only Table 3 regression, unchanged/not retrained, DGS3MO control set to 0). Point
+predictions are small and P(rises) values sit close to 40-50% &mdash; consistent with, not contradicted by,
+Table 3's mostly-insignificant tone coefficients. We have more conviction on the rate-decision leg (driven by
+decision-momentum) and the tone-momentum leg (driven by mean-reversion, corroborated across two independent
+models) than on this market-reaction leg.</p>
 
 <h3>Recommendation</h3>
 <p>Given a hike is a live, non-trivial scenario our own text analysis flags independently of market pricing,

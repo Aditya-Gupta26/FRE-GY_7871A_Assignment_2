@@ -50,4 +50,6 @@ Re-running the pipeline in dependency order:
 
 `AI_USE.md` gained a dedicated section owning this as a mistake in the original implementation, not a vague "improvements were made" note. `README.md`'s Steps 7 and 10 summaries and Key Results section were updated, and this file was added as Step 17. `docs/steps/04`, `10`, and `12` each got a correction note left visible alongside the original (now-corrected) text, rather than a silent rewrite — consistent with how this whole documentation set has tried to represent what actually happened, mistakes included.
 
-**Back to:** [the central index](../STORY.md).
+This wasn't the last correction either — see [Step 18](18-forecast-redesign.md), a more conceptual fix to the forecast model itself, found shortly after this one.
+
+**Next:** [Step 18 — Forecast Redesign](18-forecast-redesign.md). **Back to:** [the central index](../STORY.md).

@@ -18,6 +18,8 @@ Estimates the probability that September's statement will read *more* hawkish th
 
 Takes the word-list regression coefficients from Table 3 ([Step 11](11-master-dataset-and-regressions.md)), plugs in a "September looks like July" tone scenario, and converts the resulting point prediction into a probability that each indicator rises — using each regression's own residual standard deviation and the normal CDF.
 
+> **Correction added after initial delivery** (full story in [Step 18](18-forecast-redesign.md)): this description is accurate to what the code *originally* did, and that was the problem. Plugging July's own tone into a regression that had been *fit using July's own row* just returns July's already-known in-sample fitted value — not a forecast of September at all. `statement_tone_momentum()` had a related issue: it was a 2-bucket frequency lookup, not a trained model, and was distorted by a ceiling effect. Both were redesigned; see Step 18 for what changed and why. Left visible here rather than silently corrected, per this project's practice.
+
 ## A bug, caught by actually running the code rather than trusting it
 
 The first run of `forecast.py` crashed immediately:
@@ -56,4 +58,6 @@ We also caught and explained a **ceiling effect** in the naive tone-momentum num
 
 The market-reaction forecast came back with small point predictions and probabilities close to 50% for every indicator — which is not a weak result, but an *honest* one, directly consistent with [Step 11](11-master-dataset-and-regressions.md)'s finding that most tone coefficients weren't statistically significant once the 3-month-bill confound was controlled for.
 
-**Next:** [Step 14 — Notebook Assembly](14-notebook-assembly.md).
+**This is where things stood at initial delivery.** A user question shortly after — "why are we using July's data to predict September's market reaction?" — led to finding that `market_reaction_forecast()` wasn't actually forecasting anything (see the correction note above). See [Step 18](18-forecast-redesign.md) for the full redesign: what was wrong, the design options considered and rejected, and the real numbers after the fix.
+
+**Next:** [Step 14 — Notebook Assembly](14-notebook-assembly.md), or skip ahead to [Step 18 — Forecast Redesign](18-forecast-redesign.md) for the correction.

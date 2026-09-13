@@ -331,3 +331,44 @@ Add a new field, populated only by `scrape_minutes()`, holding the true release 
 5. Update `AI_USE.md`, `README.md`, the affected `docs/steps/*.md` files, add the new Step 17 doc, update `STORY.md`.
 6. New git commit (not amended — the original commits stay as an honest record of what was actually shipped when), push.
 7. Re-deliver the corrected PDF to the user.
+
+---
+
+## 10. Forecast redesign: `market_reaction_forecast()` wasn't forecasting anything
+
+A second, more conceptual mistake than Section 9's, found through direct back-and-forth with the user rather than an independent check on our part. Recorded here as a plan-then-verify entry like Section 9, though most of the "planning" happened as live discussion — this section consolidates the final agreed design and what was verified after building it.
+
+### The problem
+
+`forecast.py::market_reaction_forecast()` plugged July's own tone scores into Table 3's statements-only word-list regression — a regression **fit using July's own row** as one of its 73 observations. Plugging July's tone back in therefore returns the model's in-sample fitted value for July, not a forecast of September. The user's framing, once we got past a couple of rounds of me restating the problem too gently: *"Piece 3 result should then just be July's result as the OLS predicts."* Exactly right, mathematically.
+
+A related, smaller problem in the same file: `statement_tone_momentum()` was a 2-bucket frequency lookup (was the previous transition an increase?), not a trained model, and its output was distorted by a ceiling effect — July's `wl_interest_rate` already sat at the scale's maximum, mechanically depressing "P(further increase)" regardless of true momentum.
+
+### Design options discussed and rejected before landing on the final approach
+
+1. **Decision-probability-weighted conditional means** (average historical tone by decision type, weighted by Piece 1's P(cut)/P(hold)/P(hike)) — workable, but ties Piece 3 to Piece 1's output through an estimated expectation, adding a dependency and a step of approximation that turned out to be unnecessary.
+2. **AR(1) on each tone topic alone** — risked pulling every forecast toward the unconditional historical mean, discarding the fact that tone moves in long regime-like stretches (visible in Figure 1), not smooth mean-reverting noise.
+3. **An intermediate version requiring `E[decision_code(September)]`** (an expected value computed from Piece 1's probabilities, fed into a "same-meeting decision predicts same-meeting tone" model) — the user pointed out this dependency disappears entirely if every predictor is lagged instead: July's decision and tone are already known, real values, needing no estimation at all.
+4. **Retraining Table 3 itself with lagged inputs** (last meeting's tone predicting this meeting's market reaction) — proposed by the user, rejected by us jointly after discussion: this would answer a different, economically dubious question (does stale, already-priced-in information predict today's market move — nothing here says it should), and would stop matching what the assignment's own Table 3 requires (contemporaneous tone explaining that same release's reaction). Table 3 stays exactly as originally fit.
+
+### The final design
+
+One shared, **lagged** predictor set — each meeting's own decision plus all four word-list topic scores (`wl_interest_rate`, `wl_economy`, `wl_job_market`, `wl_sentiment`), each lagged by one meeting — trains three kinds of models, differing only in the target `y`:
+
+1. **`rate_decision_probabilities()`**: `y` = this meeting's decision (ordinal logit). Extended from the original 3-predictor version (which used only `lag_decision_code` + 2 of the 4 topics, with no stated reason for the omission — see below) to use all 5.
+2. **`forecast_tone_scores()`** (new): `y` = this meeting's own topic score, one OLS per topic. Predicts September's real value for each of the 4 topics from July's real, known lagged inputs — this is the actual fix, since this specific combination of predictors was never a training row's `x` (September doesn't exist in the training data at all).
+3. **`statement_tone_momentum()`**: `y` = binary, was `wl_interest_rate` higher than the previous statement's (logistic regression, not a lookup).
+
+`market_reaction_forecast()` (Piece 3) is **not retrained**. It consumes `forecast_tone_scores()`'s real September prediction as the scenario fed into Table 3's already-fitted, unchanged coefficients.
+
+### An honest note on why the predictor set changed shape mid-discussion
+
+Partway through, discussing a simplified formula, `lag_decision_code` was dropped from the shared predictor set to match an example the user wrote out using only the four tone topics. That was our mistake to catch, not the user's to have specified precisely — the original 3-predictor model had already shown `lag_decision_code` was the *only* statistically significant predictor (p=0.001, vs. p=0.30-0.96 for tone). Dropping the one predictor with real evidence behind it, to make the formula look tidier, would have made Piece 1 worse for no good reason. It was added back before implementation, and used consistently across all three model types above.
+
+### Verified after building it, not assumed
+
+- All three model types ran cleanly; coefficients and standard errors look economically sensible (no blow-ups suggesting severe collinearity instability despite 5 predictors on 68 observations).
+- `lag_decision_code` remained the dominant, significant predictor in the rate-decision model even after adding `wl_economy`/`wl_job_market` (p=0.001 vs. p=0.62/p=0.85 for the two new predictors) — an honest, expected finding, not a surprise requiring a design change.
+- The tone-forecast layer's R² ranged 0.41-0.75 across the four topics — higher than initially expected, but economically sensible given Figure 1 shows tone persisting in long regime-like stretches (strong autocorrelation), not smooth noise.
+- The new tone-momentum estimate (~10.6%) and the tone-forecast layer's own prediction (September `wl_interest_rate` = 0.89, below July's 1.00) independently agree on direction (further increase unlikely, mean reversion more likely) — two separately-specified models corroborating each other, not one number derived from the other.
+- Table 3's own numbers were not touched by this change at all (confirmed by design, not just assumption — the function that reads `table3_regressions.csv` was not modified, only what gets fed into its already-fitted coefficients).
