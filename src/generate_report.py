@@ -204,14 +204,14 @@ before the meeting being forecast, outputs P(cut)=0.8%, P(hold)=23.7%, P(hike)=7
 the two extra topics (economy, job market) barely moved this number at all; both come back statistically
 insignificant (p=0.62, p=0.85), so really the model is dominated almost entirely by the previous decision
 itself (p=0.001), not by tone. That is a slightly humbling finding for an NLP-heavy project, but we think it
-is the honest one. Real market pricing in early September 2026 (CME FedWatch roughly 56-66%, Kalshi roughly
-48%, Polymarket roughly 49%) frames this meeting as a genuine "coin flip," which is a sharp jump up from
-roughly 36% before Warsh's August 28 Jackson Hole speech, the same catalyst that our text-only model
-independently flagged without ever looking at market prices. Since our model is likely overconfident (68
-training meetings is not a lot, and the fitted probability is pushed toward the edge by the strong
-decision-momentum effect), we are blending it with this market cross-check rather than just reporting the raw
-model output on its own:</p>
-<p style="font-size:13pt; font-weight:bold; text-align:center;">P(cut) &asymp; 5% &nbsp;&nbsp; P(hold) &asymp; 35% &nbsp;&nbsp; P(hike) &asymp; 60%</p>
+is the honest one. As an external sanity check only, not something we fed into our own number, real market
+pricing in early September 2026 (CME FedWatch roughly 56-66%, Kalshi roughly 48%, Polymarket roughly 49%)
+frames this meeting as a genuine "coin flip," which is a sharp jump up from roughly 36% before Warsh's August
+28 Jackson Hole speech, the same catalyst that our text-only model independently flagged without ever looking
+at market prices. Our model is more confident than the market, and with only 68 training meetings that
+confidence should probably be treated with some caution, but the assignment asks for our own forecast, not the
+market's, so we are reporting the model's own output as is rather than pulling it toward the market:</p>
+<p style="font-size:13pt; font-weight:bold; text-align:center;">P(cut) &asymp; 0.8% &nbsp;&nbsp; P(hold) &asymp; 23.7% &nbsp;&nbsp; P(hike) &asymp; 75.5%</p>
 
 <h3>Statement tone</h3>
 <p><strong>P(September statement more hawkish than July) &asymp; 10%.</strong> This number now comes from a
@@ -236,14 +236,15 @@ the tone-momentum leg (driven by mean-reversion, and backed up by two independen
 in this market-reaction leg, which is riding on weaker statistical ground.</p>
 
 <h3>Recommendation</h3>
-<p>Given that a hike is a live, non-trivial scenario that our own text analysis flags on its own, independent
-of what the market is pricing, and given that short-end Treasury yields showed the most consistent (even if
-still statistically a bit fragile) relationship to hawkish word-list tone across every method in Table 3, our
-position would be a <strong>modest short-duration tilt at the front end</strong>, for example underweighting
-1-2yr Treasury exposure, or avoiding adding back rate-cut-sensitive positioning right now. We are deliberately
-not recommending a large directional bet here, we are sizing this call to match our own evidence's real
-statistical weakness, not to match the market's more confident framing, since we think that would be
-overstating what our numbers actually support.</p>
+<p>Given that our own model puts a hike as the clear modal outcome (75.5%), driven mainly by the strong,
+statistically significant decision-momentum effect rather than tone, and given that short-end Treasury yields
+showed the most consistent (even if still statistically a bit fragile) relationship to hawkish word-list tone
+across every method in Table 3, our position would be a <strong>modest short-duration tilt at the front
+end</strong>, for example underweighting 1-2yr Treasury exposure, or avoiding adding back rate-cut-sensitive
+positioning right now. We are deliberately not recommending a large directional bet here, we are sizing this
+call to match our own evidence's real statistical weakness (only 68 training meetings, and a probability that
+is likely pushed toward the edge by that small sample), not scaling it up to match the model's raw 75.5%
+figure at face value.</p>
 <p><strong>What would prove this wrong:</strong> a September 15-16 rate <strong>cut</strong> would directly
 contradict our modal call and prove us wrong straight away. Short of that, a statement that reads clearly more
 dovish than July's, for example explicit language like "inflation has eased" or "downside risks to growth"
